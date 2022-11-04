@@ -6,6 +6,7 @@
 #include <memory>
 #include <map>
 #include <array>
+#include <tuple>
 
 #include <oaidl.h>
 #include <wrl.h>
@@ -71,7 +72,10 @@ private:
 #define DK_SEEK_TO              CModelAccess::Instance()->seek_to
 #define DK_GET_CURSTACK         CModelAccess::Instance()->get_current_callstack
 #define DK_DUMP_CURSTACK        CModelAccess::Instance()->dump_current_callstack
+#define DK_GET_CURPOS           CModelAccess::Instance()->get_current_pos
 #define DK_GET_CURTID           CModelAccess::Instance()->get_current_tid
+#define DK_GET_HEAP             CModelAccess::Instance()->get_heap_memory
+#define DK_GET_MEM_ACCESS       CModelAccess::Instance()->get_mem_access
 
 DECLARE_CMD(ls_model)
 DECLARE_CMD(ls_sessions)
@@ -92,6 +96,30 @@ DECLARE_CMD(call)
 DECLARE_CMD(ccall)
 
 string BSTR2str(BSTR bstr);
+
+typedef struct _ttd_heap_memory
+{
+    string                      function;
+    tuple<uint64_t, uint64_t>   pos{ 0, 0 };
+    uint32_t                    thread_id{ 0 };
+    uint64_t                    res_id{ 0 };
+    uint64_t                    res_new_id{ 0 };
+    uint64_t                    size{ 0 };
+}ttd_heap_memory;
+
+typedef struct _ttd_mem_access
+{
+    string                      access_type;
+    uint64_t                    ip_addr;
+    uint64_t                    addr;
+    uint64_t                    size;
+    uint64_t                    value;
+    uint64_t                    overwritten_value;
+    uint64_t                    thread_id;
+    uint64_t                    event_type;
+    tuple<uint64_t, uint64_t>   start_pos{ 0, 0 };
+    tuple<uint64_t, uint64_t>   end_pos{ 0, 0 };
+}ttd_mem_access;
 
 class CModelAccess
 {
@@ -117,8 +145,6 @@ public:
     DK_MOBJ_PTR get_process(size_t session_id, size_t process_id);
 
     DK_MOBJ_PTR get_thread(size_t session_id, size_t process_id, size_t thread_id);
-
-    DK_MOBJ_PTR get_cursession();
 
 public:
     vector<tuple<uint64_t, DK_MOBJ_PTR>> iterate(DK_MOBJ_PTR& mobj);
@@ -198,6 +224,8 @@ public:
 
     string dump_heap_memory(DK_MOBJ_PTR heap_memory);
 
+    vector<ttd_heap_memory> get_heap_memory();
+
     string dump_mem_access_result(DK_MOBJ_PTR mem_access_result);
 
     string dump_mem_use_result(DK_MOBJ_PTR mem_use_result);
@@ -211,6 +239,15 @@ public:
     vector<string> execute_cmd(string command);
 
     uint64_t get_current_tid();
+
+    vector<ttd_mem_access> get_mem_access(uint64_t start_addr, uint64_t end_addr, string mode);
+
+    DK_MOBJ_PTR get_current_session();
+    DK_MOBJ_PTR get_current_process();
+    DK_MOBJ_PTR get_current_thread();
+    DK_MOBJ_PTR get_current_stack();
+    DK_MOBJ_PTR get_current_frame();
+    tuple<uint64_t, uint64_t> get_current_pos();
 
 private:
     IHostDataModelAccess*   m_model_access{ nullptr };
